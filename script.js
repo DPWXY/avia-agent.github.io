@@ -229,6 +229,10 @@ function speak(text) {
     window.speechSynthesis.speak(utt);
 }
 
+window.selectAircraft = selectAircraft;
+window.sendMessage = sendMessage;
+window.restartConversation = restartConversation;
+
 // CSS Animations
 const style = document.createElement('style');
 style.textContent = `
