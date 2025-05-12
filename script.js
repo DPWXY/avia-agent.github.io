@@ -3,7 +3,7 @@
 const OPENAI_CHAT_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_AUDIO_URL = 'https://api.openai.com/v1/audio/transcriptions';
 // Securely store and retrieve your OpenAI key
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 
 let selectedAircraft = '';
 let isRecording = false;

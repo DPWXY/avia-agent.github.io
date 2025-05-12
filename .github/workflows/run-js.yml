@@ -1,15 +1,15 @@
-name: Run JS with Secret
+name: Build Frontend with Secret
 
 on: [push]
 
 jobs:
-  run-js:
+  build:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
@@ -17,7 +17,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run script.js with secret
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: node script.js
+      - name: Inject OpenAI Key
+        run: echo "VITE_OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> $GITHUB_ENV
+
+      - name: Build the project
+        run: npm run build
