@@ -4,7 +4,7 @@ const HF_API_AUDIO_URL = 'https://dpwxy15-avia-agent-backend.hf.space/transcribe
 
 let selectedAircraft = '';
 let isRecording = false;
-let systemPrompt = 'You are an expert aircraft assistant. Provide concise, accurate, and friendly help.';
+let systemPrompt;
 let mediaRecorder;
 let audioChunks = [];
 let chatHistory = [];
@@ -31,7 +31,7 @@ document.getElementById('restartButton').addEventListener('click', restartConver
 function selectAircraft(aircraft) {
     if (!aircraft) return;
     selectedAircraft = aircraft;
-    systemPrompt = `You are a knowledgeable and helpful assistant specialized in the ${aircraft}. You are here to answer questions to help pilots with the ${aircraft}.`;
+    systemPrompt = `You are a knowledgeable and helpful assistant specialized in the ${aircraft}. You are here to answer questions to help pilots in concise and accurate manner.`;
     chatHistory = [{ role: 'system', content: systemPrompt }];
 
     const welcome = document.querySelector('.welcome-message');
