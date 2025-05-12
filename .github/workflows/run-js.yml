@@ -16,6 +16,6 @@ jobs:
 
 
       - name: Run script.js with secret
-        run: node script.js
+        run: node aviaAgent.js
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
