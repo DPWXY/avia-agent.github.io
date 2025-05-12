@@ -1,20 +1,66 @@
+// === Configuration ===
+// OpenAI API endpoints
+const OPENAI_CHAT_URL = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_AUDIO_URL = 'https://api.openai.com/v1/audio/transcriptions';
+// Securely store and retrieve your OpenAI key
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;;
+
 let selectedAircraft = '';
 let isRecording = false;
+let systemPrompt = 'You are an expert aircraft assistant. Provide concise, accurate, and friendly help.';
+// Recording objects
+let mediaRecorder;
+let audioChunks = [];
+// Chat history for multi-turn conversation
+let chatHistory = [];
+
+// Restart conversation
+function restartConversation() {
+    if (confirm('Are you sure you want to restart the conversation? This will clear all messages.')) {
+        // Clear chat messages
+        const messagesDiv = document.getElementById('chat-messages');
+        messagesDiv.innerHTML = '';
+        
+        // Reset chat history
+        chatHistory = [];
+        
+        // Reset aircraft selection
+        const select = document.getElementById('aircraftSelect');
+        select.value = '';
+        selectedAircraft = '';
+        
+        // Show welcome message
+        const welcome = document.createElement('div');
+        welcome.className = 'welcome-message';
+        welcome.innerHTML = `
+            <i class="fas fa-robot robot-icon"></i>
+            <p>Welcome to Avia! Please select your aircraft to begin chatting.</p>
+        `;
+        messagesDiv.appendChild(welcome);
+    }
+}
+
+// Add event listener for restart button
+document.getElementById('restartButton').addEventListener('click', restartConversation);
 
 // Aircraft selection
 function selectAircraft(aircraft) {
     if (!aircraft) return;
-    
     selectedAircraft = aircraft;
-    const welcomeMessage = document.querySelector('.welcome-message');
-    if (welcomeMessage) {
-        welcomeMessage.style.opacity = '0';
-        setTimeout(() => welcomeMessage.remove(), 300);
+    systemPrompt = `You are a knowledgeable and helpful assistant specialized in the ${aircraft}. You are here to answer questions to help pilots with the ${aircraft}.` ;
+
+    // Initialize chat history with system prompt
+    chatHistory = [{ role: 'system', content: systemPrompt }];
+
+    const welcome = document.querySelector('.welcome-message');
+    if (welcome) {
+        welcome.style.opacity = '0';
+        setTimeout(() => welcome.remove(), 300);
     }
     addMessage('system', `Selected aircraft: ${aircraft}. How can I assist you with your ${aircraft} today?`);
 }
 
-// Chat functionality
+// Add chat message to UI
 function addMessage(type, text) {
     const messagesDiv = document.getElementById('chat-messages');
     const messageDiv = document.createElement('div');
@@ -22,157 +68,173 @@ function addMessage(type, text) {
     messageDiv.style.opacity = '0';
     messageDiv.style.transform = 'translateY(20px)';
     messageDiv.style.transition = 'all 0.3s ease';
-    
-    const messageContent = document.createElement('div');
-    messageContent.style.display = 'flex';
-    messageContent.style.alignItems = 'flex-start';
-    messageContent.style.gap = '10px';
-    messageContent.style.padding = '12px';
-    messageContent.style.margin = '8px 0';
-    messageContent.style.borderRadius = '12px';
-    messageContent.style.backgroundColor = type === 'user' ? 'rgba(0,82,204,0.1)' : 'white';
-    messageContent.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
-    
-    // Add icon
+
+    const content = document.createElement('div');
+    content.style.display = 'flex';
+    content.style.alignItems = 'flex-start';
+    content.style.gap = '10px';
+    content.style.padding = '12px';
+    content.style.margin = '8px 0';
+    content.style.borderRadius = '12px';
+    content.style.backgroundColor = type === 'user' ? 'rgba(0,82,204,0.1)' : 'white';
+    content.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+
     const icon = document.createElement('i');
     icon.className = type === 'user' ? 'fas fa-user' : 'fas fa-robot';
-    icon.style.color = type === 'user' ? '#0052cc' : '#0052cc';
-    
+    icon.style.color = '#0052cc';
+
     const textDiv = document.createElement('div');
     textDiv.style.flex = '1';
-    
-    const textSpan = document.createElement('span');
-    textSpan.textContent = text;
-    textDiv.appendChild(textSpan);
-    
+    const span = document.createElement('span');
+    span.textContent = text;
+    textDiv.appendChild(span);
+
     if (type === 'system') {
-        const audioButton = document.createElement('button');
-        audioButton.innerHTML = '<i class="fas fa-volume-up"></i>';
-        audioButton.style.border = 'none';
-        audioButton.style.background = 'none';
-        audioButton.style.cursor = 'pointer';
-        audioButton.style.color = '#0052cc';
-        audioButton.style.padding = '4px';
-        audioButton.style.marginLeft = '8px';
-        audioButton.onclick = () => speak(text);
-        textDiv.appendChild(audioButton);
+        const btn = document.createElement('button');
+        btn.innerHTML = '<i class="fas fa-volume-up"></i>';
+        btn.style.border = 'none';
+        btn.style.background = 'none';
+        btn.style.cursor = 'pointer';
+        btn.style.color = '#0052cc';
+        btn.style.padding = '4px';
+        btn.style.marginLeft = '8px';
+        btn.onclick = () => speak(text);
+        textDiv.appendChild(btn);
     }
-    
-    messageContent.appendChild(icon);
-    messageContent.appendChild(textDiv);
-    messageDiv.appendChild(messageContent);
-    
+
+    content.appendChild(icon);
+    content.appendChild(textDiv);
+    messageDiv.appendChild(content);
     messagesDiv.appendChild(messageDiv);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    
-    // Animate in
+
     setTimeout(() => {
         messageDiv.style.opacity = '1';
         messageDiv.style.transform = 'translateY(0)';
     }, 50);
 }
 
-// Send message function
-function sendMessage() {
-    if (!selectedAircraft) {
-        const dropdown = document.getElementById('aircraftSelect');
-        dropdown.style.animation = 'shake 0.5s ease-in-out';
-        setTimeout(() => dropdown.style.animation = '', 500);
+// Send chat message and handle multi-turn conversation
+async function sendMessage(userText) {
+    const trimmed = userText.trim();
+    if (!selectedAircraft || !trimmed) {
+        if (!selectedAircraft) shakeSelect();
         return;
     }
-    
-    const input = document.getElementById('textInput');
-    const message = input.value.trim();
-    
-    if (message) {
-        addMessage('user', message);
-        input.value = '';
-        
-        // Show typing indicator
-        const typingDiv = document.createElement('div');
-        typingDiv.className = 'message system typing';
-        typingDiv.innerHTML = '<div style="padding: 12px; display: flex; gap: 4px;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
-        document.getElementById('chat-messages').appendChild(typingDiv);
-        
-        // Simulate AI response
-        setTimeout(() => {
-            typingDiv.remove();
-            const response = `Here's what I know about the ${selectedAircraft} regarding your question: ${message}`;
-            addMessage('system', response);
-        }, 1500);
+    // Add user message to history and UI
+    chatHistory.push({ role: 'user', content: trimmed });
+    addMessage('user', trimmed);
+    // Clear input field
+    document.getElementById('textInput').value = '';
+
+    // Show typing indicator
+    const typing = document.createElement('div');
+    typing.className = 'message system typing';
+    typing.innerHTML = '<div style="padding:12px;display:flex;gap:4px;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+    document.getElementById('chat-messages').appendChild(typing);
+
+    try {
+        const resp = await fetch(OPENAI_CHAT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                messages: chatHistory
+            })
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const { choices } = await resp.json();
+        const aiText = choices[0].message.content.trim();
+
+        // Add AI response to history and UI
+        chatHistory.push({ role: 'assistant', content: aiText });
+        typing.remove();
+        addMessage('system', aiText);
+    } catch (e) {
+        console.error('API error:', e);
+        typing.remove();
+        addMessage('system', '⚠️ Error communicating with OpenAI.');
     }
 }
 
-// Voice recording functionality
-const recordButton = document.getElementById('recordButton');
-recordButton.addEventListener('click', toggleRecording);
-
-function toggleRecording() {
-    if (!selectedAircraft) {
-        const dropdown = document.getElementById('aircraftSelect');
-        dropdown.style.animation = 'shake 0.5s ease-in-out';
-        setTimeout(() => dropdown.style.animation = '', 500);
-        return;
-    }
-    
-    isRecording = !isRecording;
-    const recordIcon = recordButton.querySelector('i');
-    
-    if (isRecording) {
-        recordButton.style.backgroundColor = '#dc3545';
-        recordIcon.className = 'fas fa-stop';
-        addMessage('system', 'Recording started... Speak clearly into your microphone.');
-    } else {
-        recordButton.style.backgroundColor = 'var(--primary-color)';
-        recordIcon.className = 'fas fa-microphone';
-        addMessage('system', 'Recording stopped. Processing your message...');
-        
-        // Simulate processing
-        setTimeout(() => {
-            addMessage('system', 'I understood your voice message. Here would be the AI response.');
-        }, 1500);
-    }
+// Shake selector if none chosen
+function shakeSelect() {
+    const dd = document.getElementById('aircraftSelect');
+    dd.style.animation = 'shake 0.5s ease-in-out';
+    setTimeout(() => dd.style.animation = '', 500);
 }
 
-// Text-to-speech functionality
-function speak(text) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-    window.speechSynthesis.speak(utterance);
-}
-
-// Handle enter key in text input
-document.getElementById('textInput').addEventListener('keypress', function(e) {
+// Handle Enter key in text input
+document.getElementById('textInput').addEventListener('keypress', e => {
     if (e.key === 'Enter') {
-        sendMessage();
+        const val = e.target.value;
+        sendMessage(val);
     }
 });
 
-// Add some CSS animations
+// Voice recording & transcription
+const recordButton = document.getElementById('recordButton');
+recordButton.addEventListener('click', async () => {
+    if (!selectedAircraft) return shakeSelect();
+    isRecording = !isRecording;
+    const icon = recordButton.querySelector('i');
+
+    if (isRecording) {
+        // Start recording
+        audioChunks = [];
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            addMessage('system', 'Transcribing audio...');
+            const form = new FormData();
+            form.append('file', blob, 'voice.webm');
+            form.append('model', 'whisper-1');
+            try {
+                const res = await fetch(OPENAI_AUDIO_URL, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+                    body: form
+                });
+                const { text } = await res.json();
+                // Use transcription as input and send
+                sendMessage(text);
+            } catch (err) {
+                console.error('Transcription error:', err);
+                addMessage('system', '⚠️ Transcription failed.');
+            }
+        };
+        mediaRecorder.start();
+        recordButton.style.backgroundColor = '#dc3545';
+        icon.className = 'fas fa-stop';
+        addMessage('system', 'Recording started...');
+    } else {
+        // Stop recording
+        mediaRecorder.stop();
+        recordButton.style.backgroundColor = 'var(--primary-color)';
+        icon.className = 'fas fa-microphone';
+        addMessage('system', 'Recording stopped.');
+    }
+});
+
+// Text-to-speech
+function speak(text) {
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.rate = 0.9;
+    utt.pitch = 1;
+    window.speechSynthesis.speak(utt);
+}
+
+// CSS Animations
 const style = document.createElement('style');
 style.textContent = `
-    @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
-    }
-    
-    .typing .dot {
-        width: 8px;
-        height: 8px;
-        background: var(--primary-color);
-        border-radius: 50%;
-        display: inline-block;
-        animation: bounce 1.3s linear infinite;
-    }
-    
-    .typing .dot:nth-child(2) { animation-delay: 0.2s; }
-    .typing .dot:nth-child(3) { animation-delay: 0.4s; }
-    
-    @keyframes bounce {
-        0%, 60%, 100% { transform: translateY(0); }
-        30% { transform: translateY(-4px); }
-    }
+@keyframes shake {0%,100%{transform:translateX(0);}25%{transform:translateX(-5px);}75%{transform:translateX(5px);}}
+.typing .dot {width:8px;height:8px;background:var(--primary-color);border-radius:50%;display:inline-block;animation:bounce 1.3s linear infinite;}
+.typing .dot:nth-child(2){animation-delay:0.2s;} .typing .dot:nth-child(3){animation-delay:0.4s;}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-4px);}}
 `;
 document.head.appendChild(style);

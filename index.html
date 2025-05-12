@@ -23,7 +23,12 @@
     <main>
         <div class="llm-section">
             <div class="header-section">
-                <h1><i class="fas fa-comments"></i> Chat with Avia</h1>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1><i class="fas fa-comments"></i> Chat with Avia</h1>
+                    <button id="restartButton" class="restart-btn" title="Restart Conversation">
+                        <i class="fas fa-redo"></i> Restart
+                    </button>
+                </div>
                 <div class="aircraft-selection">
                     <select id="aircraftSelect" onchange="selectAircraft(this.value)" class="aircraft-dropdown">
                         <option value="" disabled selected>Select Your Aircraft</option>

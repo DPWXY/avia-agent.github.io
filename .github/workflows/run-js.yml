@@ -1,0 +1,15 @@
+name: Run JS with Secret
+
+on: [push]
+
+jobs:
+  run-js:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run script.js with secret
+        run: node script.js
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

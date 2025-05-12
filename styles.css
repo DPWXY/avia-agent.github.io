@@ -288,6 +288,28 @@ main {
     background: var(--hover-color);
 }
 
+.restart-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--border-radius);
+    color: var(--text-color);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.restart-btn:hover {
+    background-color: #e2e8f0;
+}
+
+.restart-btn i {
+    font-size: 0.9rem;
+}
+
 @media (max-width: 640px) {
     .about-section {
         padding: 1.5rem;
