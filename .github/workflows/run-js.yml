@@ -14,8 +14,6 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install dependencies
-        run: npm ci
 
       - name: Run script.js with secret
         run: node script.js
