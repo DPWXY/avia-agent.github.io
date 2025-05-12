@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avia - Chat Interface</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav>
+        <div class="logo">
+            <i class="fas fa-plane"></i>
+            Avia
+        </div>
+        <div class="nav-links">
+            <a href="index.html" class="active"><i class="fas fa-comments nav-icon"></i><span class="nav-text">Chat</span></a>
+            <a href="how-to.html"><i class="fas fa-info-circle nav-icon"></i><span class="nav-text">Help</span></a>
+            <a href="https://forms.gle/RjEZMzmtgU6EGLLV7" target="_blank"><i class="fas fa-comment nav-icon"></i><span class="nav-text">Feedback</span></a>
+        </div>
+    </nav>
+
+    <main>
+        <div class="llm-section">
+            <div class="header-section">
+                <h1><i class="fas fa-comments"></i> Chat with Avia</h1>
+                <div class="aircraft-selection">
+                    <select id="aircraftSelect" onchange="selectAircraft(this.value)" class="aircraft-dropdown">
+                        <option value="" disabled selected>Select Your Aircraft</option>
+                        <option value="C172">Cessna 172</option>
+                        <option value="SR22">Cirrus SR20/SR22</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="chat-interface">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="welcome-message">
+                        <i class="fas fa-robot robot-icon"></i>
+                        <p>Welcome to Avia! Please select your aircraft to begin chatting.</p>
+                    </div>
+                </div>
+                <div class="input-area">
+                    <button id="recordButton" class="record-btn" title="Start Recording">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <input type="text" id="textInput" placeholder="Ex: How to do steep turns?">
+                    <button onclick="sendMessage()" class="send-btn" title="Send Message">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
