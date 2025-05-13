@@ -31,7 +31,7 @@ document.getElementById('restartButton').addEventListener('click', restartConver
 function selectAircraft(aircraft) {
     if (!aircraft) return;
     selectedAircraft = aircraft;
-    systemPrompt = `You are a knowledgeable and helpful assistant specialized in the ${aircraft}. You are here to give short and concise answers to help pilots.`;
+    systemPrompt = `You are a knowledgeable and helpful assistant specialized in the ${aircraft}. Give short and concise answer first.`;
     chatHistory = [{ role: 'system', content: systemPrompt }];
 
     const welcome = document.querySelector('.welcome-message');
